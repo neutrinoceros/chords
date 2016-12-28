@@ -30,6 +30,8 @@ NOTES = ['C',
          ('A#','Bb'),
          'B']
 
+MODES = {'maj' : ['uni/oct', '3rd maj', '5th per'],
+         'min' : ['uni/oct', '3rd min', '5th per']}
 
 def imposedlenght(message, l) :
     if len(message) >= l :
@@ -39,11 +41,40 @@ def imposedlenght(message, l) :
         while len(longer) < l :
             longer += ' '
         return longer
-        
+
+def getfonda(key) :
+    if key[1] in '#b' :
+        return Note(key[0:2])
+    else :
+        return Note(key[0])
+
+def getmode(key) :
+    if key[1] in '#b' :
+        return key[2:]
+    else :
+        return key[1:]
+
+def _initnum(num) :
+    label = NOTES[num%12]
+    return label
+
+def _initlab(label) :
+    try :
+        num = NOTES.index(label)
+    except ValueError :
+        for l in NOTES :
+            if label in l :
+                num = NOTES.index(l)
+    finally :
+        return num
+
+    
 class Note :
-    def __init__(self, num=0) :
-        self._num   = num
-        self._label = NOTES[num%12]
+    def __init__(self, arg) :
+        if   type(arg) == int :
+            self._num, self._label = arg, _initnum(arg) 
+        elif type(arg) == str :
+            self._label, self._num = arg, _initlab(arg) 
         if type(self._label) == tuple :
             self._color = 'black'
         else :
@@ -66,12 +97,18 @@ class Note :
 
     def delta(self, note) :
         return (note._num - self._num)
-        
+
+    
 class Tuning :
-    def __init__(self, seed=Note(4)) :
-        self._seed   = seed
-        self._spaces = [0,5,10,15,19,24]
-        self._notes  = [seed + s for s in self._spaces]
+    def __init__(self, seed) :
+        if isinstance(seed, Note) :
+            self._seed = seed
+        elif type(seed) in [int,str] :
+            self._seed = Note(seed)
+        else :
+            raise TypeError
+        self._spaces = [0,5,10,15,19,24] #guitar only
+        self._notes  = [self._seed + s for s in self._spaces]
         
     def __repr__(self) :
         return ' '.join([imposedlenght((self._seed+n).__repr__(), 3) for n in self._spaces])
@@ -85,21 +122,29 @@ class Tuning :
         new += N
         return new
 
+
 class Scale :
     def __init__(self, seed=Note(4), frets=12) :
-        self._seed   = seed
-        self._tuning = Tuning(seed)
+        if isinstance(seed, Note) :
+            self._seed = seed
+        elif type(seed) in [int,str] :
+            self._seed = Note(seed)
+        else :
+            raise TypeError
+        self._tuning = Tuning(self._seed)
         self._frets  = frets
 
     def __repr__(self) :
         return '\n'.join([(self._tuning+n).__repr__() for n in range(self._frets)])
         
 
-class Gamme(Scale) : #only major
-    def __init__(self, seed=Note(4), frets=12, intervals=['uni/oct']) :
-        Scale.__init__(self, seed,frets)
-        self._intervals = intervals
-        
+class Gamme(Scale) :
+    def __init__(self, key='Cmaj') :
+        self._fonda = getfonda(key)
+        self._mode  = getmode(key)
+        Scale.__init__(self, self._fonda)
+        self._intervals = MODES[self._mode]
+    
     def __repr__(self) :
         clines = []
         for n in range(self._frets) :
@@ -116,6 +161,11 @@ class Chord :
 
 # script
 # ---------------------------------------
-
-majeure = Gamme(seed=Note(0),intervals=['uni/oct', '3rd maj', '5th per'])
-print majeure
+a=Note(5)
+print a
+print Note('D#')
+print Tuning('D#')
+print Scale(Note(4))
+print Gamme("Cmaj")
+print "\n\nBbmin\n"
+print Gamme("Bbmin")
